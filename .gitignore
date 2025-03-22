@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Airflow Logs
+logs/
+
+# Environment Files
+.env
+*.env
+
+# Airflow config if sensitive
+config/airflow.cfg
+
+# Docker
+*.pid
+*.sock
