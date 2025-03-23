@@ -2,6 +2,8 @@ from airflow.decorators import dag, task
 from datetime import datetime
 import logging
 
+from tasks.extract_pg import extract_propertyguru
+
 # Default arguments
 default_args = {
     'owner': 'airflow',
@@ -19,7 +21,6 @@ default_args = {
     description='ETL pipeline for Singapore housing price data',
 )
 def housing_etl_pipeline():
-
     @task
     def extract_data():
         logging.info("Extracting data from HDB, URA, SingStat, and PropertyGuru APIs...")
@@ -36,6 +37,8 @@ def housing_etl_pipeline():
         logging.info("Saving transformed data to storage/database...")
         # Save logic here
         logging.info(f"Data loaded: {data}")
+
+    extract_propertyguru()
 
     # Task chaining
     extracted = extract_data()
