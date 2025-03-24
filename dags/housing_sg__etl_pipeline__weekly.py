@@ -3,6 +3,7 @@ from datetime import datetime
 import logging
 
 from tasks.extract_pg import extract_propertyguru
+from tasks.extract_hdb import extract_hdb_resale
 
 # Default arguments
 default_args = {
@@ -39,6 +40,7 @@ def housing_etl_pipeline():
         logging.info(f"Data loaded: {data}")
 
     extract_propertyguru()
+    extract_hdb_resale()
 
     # Task chaining
     extracted = extract_data()
