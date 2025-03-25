@@ -16,3 +16,8 @@ config/airflow.cfg
 # Docker
 *.pid
 *.sock
+
+# data
+data/
+
+.DS_Store

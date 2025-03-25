@@ -132,6 +132,7 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    shm_size: '2g'
 
   airflow-scheduler:
     <<: *airflow-common
@@ -170,6 +171,7 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    shm_size: '2g'
 
   airflow-triggerer:
     <<: *airflow-common
