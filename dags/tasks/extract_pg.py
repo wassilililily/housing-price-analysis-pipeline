@@ -4,7 +4,7 @@ from selenium_stealth import stealth
 from selenium.webdriver.common.by import By
 import time
 
-@task
+@task(retries=0)
 def extract_propertyguru():
     def init_driver():
         options = webdriver.ChromeOptions()
@@ -88,10 +88,9 @@ def extract_propertyguru():
             "title": listing_title,
             "address": listing_address,
             "price": listing_price,
+            "agent_description": agent_description,
             "details": details,
             "info": info,
-            "time": listing_time,
-            "agent_description": agent_description
         }
 
     driver = init_driver()

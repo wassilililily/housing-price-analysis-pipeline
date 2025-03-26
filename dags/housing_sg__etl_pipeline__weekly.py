@@ -2,7 +2,6 @@ from airflow.decorators import dag, task
 from datetime import datetime
 import logging
 
-from tasks.extract_pg import extract_propertyguru
 from tasks.extract_hdb import extract_hdb_resale
 from tasks.transform_hdb import transform_hdb
 from tasks.load_hdb import load_hdb
@@ -11,7 +10,7 @@ from tasks.load_hdb import load_hdb
 default_args = {
     'owner': 'airflow',
     'retries': 1,
-    'start_date': datetime(2024, 1, 1),
+    'start_date': datetime(2025, 1, 1),
 }
 
 # Define the DAG with TaskFlow API
@@ -41,7 +40,6 @@ def housing_etl_pipeline():
         # Save logic here
         logging.info(f"Data loaded: {data}")
 
-    extract_propertyguru()
     hdb_path = extract_hdb_resale()
     transformed_hdb_path = transform_hdb(hdb_path)
     load_hdb(transformed_hdb_path)
