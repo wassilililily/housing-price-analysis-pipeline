@@ -3,6 +3,8 @@ from datetime import datetime
 import logging
 
 from tasks.extract_hdb import extract_hdb_resale
+from tasks.transform_hdb import transform_hdb
+from tasks.load_hdb import load_hdb
 
 # Default arguments
 default_args = {
@@ -38,7 +40,9 @@ def housing_etl_pipeline():
         # Save logic here
         logging.info(f"Data loaded: {data}")
 
-    extract_hdb_resale()
+    hdb_path = extract_hdb_resale()
+    transformed_hdb_path = transform_hdb(hdb_path)
+    load_hdb(transformed_hdb_path)
 
     # Task chaining
     extracted = extract_data()
