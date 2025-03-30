@@ -1,9 +1,9 @@
 from airflow.decorators import dag
 from datetime import datetime
 
-from tasks.extract_pg import extract_propertyguru
-from tasks.transform_pg import transform_propertyguru
-from tasks.load_pg import load_propertyguru_data
+from tasks.propertyguru.extract_pg import extract_propertyguru
+from tasks.propertyguru.transform_pg import transform_propertyguru
+from tasks.propertyguru.load_pg import load_propertyguru_data
 
 default_args = {
     'owner': 'airflow',

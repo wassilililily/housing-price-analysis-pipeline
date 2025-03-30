@@ -46,15 +46,15 @@ with DAG(dag_id="singstat_data_processing", default_args=DEFAULT_ARGS, schedule_
                     elif file_name.lower() in response_title.lower():
                         available_files.append({"title": response_title, "id": record["id"]})
                         print(f"Found partial match: {response_title} (ID: {record['id']})")
-        if not available_files:
-            print("검색된 파일 중 원하는 파일이 없습니다.")
-        else:
-            print(f"검색된 파일 수: {len(available_files)}")
+        # if not available_files:
+        #     print("No available files found")
+        # else:
+        #     print(f"Number of available files: {len(available_files)}")
         return available_files
 
     @task
     def download_files(file_info_list: list):
-        folder_path = "/opt/airflow/project"
+        folder_path = "/opt/airflow/data"
         os.makedirs(folder_path, exist_ok=True)
         downloaded_files = {}
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
