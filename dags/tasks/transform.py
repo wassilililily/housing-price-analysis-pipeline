@@ -32,12 +32,12 @@ def transform_merge_data():
       median_household_income FLOAT,
       median_individual_income FLOAT
     ) """
-  conn.commit(create_table_query)
+  cur.execute(create_table_query)
 
   distinct_months_query = """
     SELECT DISTINCT
-      EXTRACT(YEAR FROM transaction_date) AS year,
-      EXTRACT(MONTH FROM transaction_date) AS month
+      EXTRACT(YEAR FROM month) AS year,
+      EXTRACT(MONTH FROM month) AS month
     FROM hdb_resale_prices
     ORDER BY year, month;
     """
@@ -63,10 +63,10 @@ def transform_merge_data():
 
   for year, month in distinct_year_months:
     hdb_sql_chunk = """
-      SELECT town, flat_type, storey_range, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
+      SELECT town, flat_type, storey_range_continuous, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
       FROM hdb_resale_prices
-      WHERE EXTRACT(YEAR FROM transaction_date) = %s
-        AND EXTRACT(MONTH FROM transaction_date) = %s
+      WHERE EXTRACT(YEAR FROM month) = %s
+        AND EXTRACT(MONTH FROM month) = %s
     """
     cur.execute(hdb_sql_chunk, (year, month))
     hdb_data_chunk = cur.fetchall()
@@ -99,12 +99,12 @@ def transform_merge_data():
     singstat_annual_data_chunk = cur.fetchone()
 
     # Handle None values
-    if not monthly_data:
-        monthly_data = (None, None, None)
-    if not quarterly_data:
-        quarterly_data = (None,)
-    if not annual_data:
-        annual_data = (None, None)
+    if not singstat_monthly_data_chunk:
+        singstat_monthly_data_chunk = (None, None, None)
+    if not singstat_quarterly_data_chunk:
+        singstat_quarterly_data_chunk = (None,)
+    if not singstat_annual_data_chunk:
+        singstat_annual_data_chunk = (None, None)
 
 
     insert_sql = """

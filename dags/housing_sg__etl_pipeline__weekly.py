@@ -20,6 +20,8 @@ from tasks.singstat.load_singstat import (
     load_annual_cpi_categories
 )
 
+from tasks.transform import transform_merge_data
+
 # Default arguments
 default_args = {
     'owner': 'airflow',
@@ -42,7 +44,7 @@ def housing_etl_pipeline():
     transformed_hdb_path = transform_hdb(hdb_path)
     load_hdb(transformed_hdb_path)
 
-    # SingStat ETL
+    # # SingStat ETL
     file_names = search_files()
     folder_path_and_files = download_files(file_names)
 
@@ -55,5 +57,7 @@ def housing_etl_pipeline():
     load_quarterly_data(quarterly_output)
     load_annual_basic_data(annual_basic_output)
     load_annual_cpi_categories(annual_cpi_output)
+    
+    transform_merge_data()
 
 housing_etl_pipeline = housing_etl_pipeline()
