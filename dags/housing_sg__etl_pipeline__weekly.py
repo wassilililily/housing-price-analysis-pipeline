@@ -44,7 +44,7 @@ def housing_etl_pipeline():
     transformed_hdb_path = transform_hdb(hdb_path)
     load_hdb(transformed_hdb_path)
 
-    # # SingStat ETL
+    # SingStat ETL
     file_names = search_files()
     folder_path_and_files = download_files(file_names)
 
