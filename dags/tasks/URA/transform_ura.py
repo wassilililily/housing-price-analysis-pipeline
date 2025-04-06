@@ -2,7 +2,6 @@ from airflow.decorators import task
 import pandas as pd
 import numpy as np
 from datetime import datetime
-import openpyxl
 
 def csv_file_name(sheet_name):
     return "URA_" + sheet_name.strip().replace(",", "")
