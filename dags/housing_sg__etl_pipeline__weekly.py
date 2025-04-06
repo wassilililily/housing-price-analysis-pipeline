@@ -19,6 +19,8 @@ from tasks.singstat.load_singstat import (
     load_annual_basic_data,
     load_annual_cpi_categories
 )
+from tasks.URA.transform_ura import transform_ura
+from tasks.URA.load_ura import load_ura
 
 from tasks.transform import transform_merge_data
 
@@ -57,7 +59,12 @@ def housing_etl_pipeline():
     load_quarterly_data(quarterly_output)
     load_annual_basic_data(annual_basic_output)
     load_annual_cpi_categories(annual_cpi_output)
-    
+
+    # URA ETL
+    ura_path = '/opt/airflow/dags/tasks/URA/URA.xlsx'
+    transformed_ura_path = transform_ura(ura_path)
+    load_ura(transformed_ura_path)
+
     transform_merge_data()
 
 housing_etl_pipeline = housing_etl_pipeline()
