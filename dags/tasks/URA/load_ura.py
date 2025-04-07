@@ -6,7 +6,7 @@ import os
 @task
 def load_ura(ura_csv):
     df = pd.read_csv(ura_csv)
-    table_name = os.path.basename(ura_csv)
+    table_name = os.path.basename(ura_csv).lower().replace(".csv","")
     conn = psycopg2.connect(host="postgres", port=5432, dbname="airflow", user="airflow", password="airflow")
     cur = conn.cursor()
 
@@ -29,7 +29,7 @@ def load_ura(ura_csv):
             tenure TEXT,
             postal_district INTEGER NOT NULL,
             market_segment TEXT,
-            floor_level TEXT
+            floor_level TEXT,
             floor_level_continuous FLOAT,
             remaining_lease_months INTEGER
         );
@@ -38,7 +38,12 @@ def load_ura(ura_csv):
     conn.commit()
 
     for _, row in df.iterrows():
-        values = tuple(row.fillna('').astype(str))
+        values = (row['project_name'],row['transacted_price'],row['area_sqft'],
+            row['unit_price_psf'],row['sale_date'],row['street_name'],
+            row['type_of_sale'],row['type_of_area'],row['area_sqm'],row['unit_price_psm'],
+            row['nett_price'],row['property_type'],row['number_of_units'],
+            row['tenure'],row['postal_district'],row['market_segment'],row['floor_level'],
+            row['floor_level_continuous'],row['remaining_lease_months'])
         insert_query = f"""
             INSERT INTO {table_name} (
                 project_name, transacted_price, area_sqft, unit_price_psf, sale_date,
@@ -52,3 +57,4 @@ def load_ura(ura_csv):
 
     cur.close()
     conn.close()
+    return "ura"
