@@ -38,10 +38,6 @@ def transform_hdb(file_path):
 
     df.drop(columns=['computed_remaining_lease_months', 'transaction_year'], inplace=True)
 
-    #Standardised flat_type and flat_model values
-    df['flat_type'] = df['flat_type'].str.strip()
-    df['flat_model'] = df['flat_model'].str.strip().str.lower()
-
     output_file = "/opt/airflow/data/hdb_resale_transformed.csv"
     df.to_csv(output_file, index=False)
     logging.info(f"Transformed data saved to {output_file}")
