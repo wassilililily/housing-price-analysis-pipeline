@@ -34,17 +34,15 @@ def transform_merge_data():
     ) """
   cur.execute(create_table_query)
 
-  distinct_months_query = """
-    SELECT DISTINCT
-      EXTRACT(YEAR FROM month) AS year,
-      EXTRACT(MONTH FROM month) AS month
-    FROM hdb_resale_prices
-    ORDER BY year, month;
-    """
-
-  cur.execute(distinct_months_query)
-  rows = cur.fetchall()
-  distinct_year_months = [(int(r[0]), int(r[1])) for r in rows]
+  insert_data_query = """
+    INSERT INTO housing_data (
+      transaction_date, town, flat_type, storey_range, floor_area_sqm,
+      lease_commence_year, remaining_lease_months, type, price,
+      exchange_rate, interest_rate, cpi, unemployment_rate,
+      median_household_income, median_individual_income
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+  """
 
   # Helper functions
   month_abbr = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr",
@@ -60,17 +58,23 @@ def transform_merge_data():
         return "3Q"
     elif month in (10, 11, 12):
         return "4Q"
-
-  for year, month in distinct_year_months:
-    hdb_sql_chunk = """
-      SELECT town, flat_type, storey_range_continuous, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
-      FROM hdb_resale_prices
-      WHERE EXTRACT(YEAR FROM month) = %s
-        AND EXTRACT(MONTH FROM month) = %s
+  
+  def get_singstat_data(cur, year, month):
     """
-    cur.execute(hdb_sql_chunk, (year, month))
-    hdb_data_chunk = cur.fetchall()
+    Extract SingStat data (monthly, quarterly, and annual) for the given year and month.
 
+    Args:
+        cur: Database cursor object.
+        year: Year as an integer.
+        month: Month as an integer.
+
+    Returns:
+        A tuple containing:
+        - Monthly data (Exchange_Rate, Interest_Rate, CPI_2024_base)
+        - Quarterly data (Unemployment_Rate)
+        - Annual data (Median_Household_Income, Median_Individual_Income)
+    """
+    # Monthly data
     singstat_month_str = f"{year} {month_abbr[int(month)]}"
     singstat_monthly_data_sql_chunk = """
       SELECT Exchange_Rate, Interest_Rate, CPI_2024_base
@@ -78,8 +82,9 @@ def transform_merge_data():
       WHERE month = %s
     """
     cur.execute(singstat_monthly_data_sql_chunk, (singstat_month_str,))
-    singstat_monthly_data_chunk = cur.fetchone()
+    singstat_monthly_data_chunk = cur.fetchone() or (None, None, None)
 
+    # Quarterly data
     quarter_str = get_quarter(int(month))
     singstat_quarterly_data_sql_chunk = """
       SELECT Unemployment_Rate
@@ -88,37 +93,96 @@ def transform_merge_data():
         AND quarter = %s
     """
     cur.execute(singstat_quarterly_data_sql_chunk, (year, quarter_str))
-    singstat_quarterly_data_chunk = cur.fetchone()
+    singstat_quarterly_data_chunk = cur.fetchone() or (None,)
 
+    # Annual data
     singstat_annual_data_sql_chunk = """
       SELECT Median_Household_Income, Median_Individual_Income
       FROM singstat_annual_basic_data
       WHERE year = %s
     """
-    cur.execute(singstat_annual_data_sql_chunk, (year, ))
-    singstat_annual_data_chunk = cur.fetchone()
+    cur.execute(singstat_annual_data_sql_chunk, (year,))
+    singstat_annual_data_chunk = cur.fetchone() or (None, None)
 
-    # Handle None values
-    if not singstat_monthly_data_chunk:
-        singstat_monthly_data_chunk = (None, None, None)
-    if not singstat_quarterly_data_chunk:
-        singstat_quarterly_data_chunk = (None,)
-    if not singstat_annual_data_chunk:
-        singstat_annual_data_chunk = (None, None)
+    return singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk
 
-
-    insert_sql = """
-      INSERT INTO housing_data (
-        transaction_date, town, flat_type, storey_range, floor_area_sqm,
-        lease_commence_year, remaining_lease_months, type, price,
-        exchange_rate, interest_rate, cpi, unemployment_rate,
-        median_household_income, median_individual_income
-      )
-      VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+  # HDB resale database
+  distinct_months_query_hdb_resale = """
+    SELECT DISTINCT
+      EXTRACT(YEAR FROM month) AS year,
+      EXTRACT(MONTH FROM month) AS month
+    FROM hdb_resale_prices
+    ORDER BY year, month;
     """
 
-    for row in hdb_data_chunk:
-      (town, flat_type, storey_range, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price) = row
+  cur.execute(distinct_months_query_hdb_resale)
+  rows = cur.fetchall()
+  distinct_year_months_hdb_resale = [(int(r[0]), int(r[1])) for r in rows]
+
+  # for year, month in distinct_year_months_hdb_resale:
+  #   hdb_sql_chunk = """
+  #     SELECT town, flat_type, storey_range_continuous, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
+  #     FROM hdb_resale_prices
+  #     WHERE EXTRACT(YEAR FROM month) = %s
+  #       AND EXTRACT(MONTH FROM month) = %s
+  #   """
+  #   cur.execute(hdb_sql_chunk, (year, month))
+  #   hdb_data_chunk = cur.fetchall()
+  #   singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk = get_singstat_data(cur, year, month)
+
+  #   for row in hdb_data_chunk:
+  #     (town, flat_type, storey_range, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price) = row
+
+  #     merged_row = (
+  #         datetime(year, month, 1),
+  #         town,
+  #         flat_type,
+  #         storey_range,
+  #         floor_area_sqm,
+  #         lease_commence_date,
+  #         remaining_lease_months,
+  #         "HDB",
+  #         resale_price,
+  #         singstat_monthly_data_chunk[0],
+  #         singstat_monthly_data_chunk[1],
+  #         singstat_monthly_data_chunk[2],
+  #         singstat_quarterly_data_chunk[0],
+  #         singstat_annual_data_chunk[0],
+  #         singstat_annual_data_chunk[1]
+  #       )
+  #     cur.execute(insert_data_query, merged_row)
+  #   conn.commit()
+
+  # URA database
+  distinct_months_query_ura = """
+    SELECT DISTINCT
+      EXTRACT(YEAR FROM sale_date) AS year,
+      EXTRACT(MONTH FROM sale_date) AS month
+    FROM ura_excondo
+    ORDER BY year, month;
+  """
+
+  cur.execute(distinct_months_query_ura)
+  row = cur.fetchall()
+  distinct_year_months_ura = [(int(r[0]), int(r[1])) for r in row]
+
+  for year, month in distinct_year_months_ura:
+    ura_sql_chunk = """
+    SELECT street_name, property_type, floor_level_continuous, area_sqm, tenure, remaining_lease_months, transacted_price
+      FROM ura_excondo
+      WHERE EXTRACT(YEAR FROM sale_date) = %s
+        AND EXTRACT(MONTH FROM sale_date) = %s
+    """
+    cur.execute(ura_sql_chunk, (year, month))
+    ura_data_chunk = cur.fetchall()
+    singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk = get_singstat_data(cur, year, month)
+
+    for row in ura_data_chunk:
+      (town, flat_type, storey_range, floor_area_sqm, tenure, remaining_lease_months, resale_price) = row
+      try:
+          lease_commence_date = int(tenure.strip().split(" ")[-1])
+      except ValueError:
+          lease_commence_date = None
 
       merged_row = (
           datetime(year, month, 1),
@@ -128,7 +192,7 @@ def transform_merge_data():
           floor_area_sqm,
           lease_commence_date,
           remaining_lease_months,
-          "HDB",
+          "URA",
           resale_price,
           singstat_monthly_data_chunk[0],
           singstat_monthly_data_chunk[1],
@@ -137,7 +201,7 @@ def transform_merge_data():
           singstat_annual_data_chunk[0],
           singstat_annual_data_chunk[1]
         )
-      cur.execute(insert_sql, merged_row)
+      cur.execute(insert_data_query, merged_row)
     conn.commit()
 
   cur.close()
