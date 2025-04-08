@@ -95,7 +95,6 @@ services:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
-      AIRFLOW__WEBSERVER__WORKERS: 2
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
