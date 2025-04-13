@@ -62,8 +62,8 @@ def housing_etl_pipeline():
 
     # URA ETL
     ura_path = '/opt/airflow/dags/tasks/URA/URA.xlsx'
-    transformed_ura_path = transform_ura(ura_path)
-    load_ura(transformed_ura_path)
+    transformed_ura_paths = transform_ura(ura_path)
+    load_ura(transformed_ura_paths)
 
     transform_merge_data()
 

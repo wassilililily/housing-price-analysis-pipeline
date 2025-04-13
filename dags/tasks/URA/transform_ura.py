@@ -59,6 +59,7 @@ def calculate_remaining_lease(tenure, sale_date):
 def transform_ura(ura_path):
     excel_file = ura_path
     selected_sheets = ["NonStrata", "Strata", "Apt,Condo", "ExCondo"]
+    output_paths = []
     
     for sheet in selected_sheets:
         df = pd.read_excel(excel_file, sheet_name=sheet)
@@ -77,9 +78,11 @@ def transform_ura(ura_path):
         df['remaining_lease_months'] = df.apply(lambda row: calculate_remaining_lease(row['tenure'], row['sale_date']), axis=1)
 
         output_path = f"/opt/airflow/data/{output_file_name}.csv"
+        output_paths.append(output_path)
         df.to_csv(output_path, index=False)
         
-    return output_path
+    print(output_paths)      
+    return output_paths
     
     
 
