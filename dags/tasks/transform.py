@@ -119,39 +119,39 @@ def transform_merge_data():
   rows = cur.fetchall()
   distinct_year_months_hdb_resale = [(int(r[0]), int(r[1])) for r in rows]
 
-  # for year, month in distinct_year_months_hdb_resale:
-  #   hdb_sql_chunk = """
-  #     SELECT town, flat_type, storey_range_continuous, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
-  #     FROM hdb_resale_prices
-  #     WHERE EXTRACT(YEAR FROM month) = %s
-  #       AND EXTRACT(MONTH FROM month) = %s
-  #   """
-  #   cur.execute(hdb_sql_chunk, (year, month))
-  #   hdb_data_chunk = cur.fetchall()
-  #   singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk = get_singstat_data(cur, year, month)
+  for year, month in distinct_year_months_hdb_resale:
+    hdb_sql_chunk = """
+      SELECT town, flat_type, storey_range_continuous, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
+      FROM hdb_resale_prices
+      WHERE EXTRACT(YEAR FROM month) = %s
+        AND EXTRACT(MONTH FROM month) = %s
+    """
+    cur.execute(hdb_sql_chunk, (year, month))
+    hdb_data_chunk = cur.fetchall()
+    singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk = get_singstat_data(cur, year, month)
 
-  #   for row in hdb_data_chunk:
-  #     (town, flat_type, storey_range, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price) = row
+    for row in hdb_data_chunk:
+      (town, flat_type, storey_range, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price) = row
 
-  #     merged_row = (
-  #         datetime(year, month, 1),
-  #         town,
-  #         flat_type,
-  #         storey_range,
-  #         floor_area_sqm,
-  #         lease_commence_date,
-  #         remaining_lease_months,
-  #         "HDB",
-  #         resale_price,
-  #         singstat_monthly_data_chunk[0],
-  #         singstat_monthly_data_chunk[1],
-  #         singstat_monthly_data_chunk[2],
-  #         singstat_quarterly_data_chunk[0],
-  #         singstat_annual_data_chunk[0],
-  #         singstat_annual_data_chunk[1]
-  #       )
-  #     cur.execute(insert_data_query, merged_row)
-  #   conn.commit()
+      merged_row = (
+          datetime(year, month, 1),
+          town,
+          flat_type,
+          storey_range,
+          floor_area_sqm,
+          lease_commence_date,
+          remaining_lease_months,
+          "HDB",
+          resale_price,
+          singstat_monthly_data_chunk[0],
+          singstat_monthly_data_chunk[1],
+          singstat_monthly_data_chunk[2],
+          singstat_quarterly_data_chunk[0],
+          singstat_annual_data_chunk[0],
+          singstat_annual_data_chunk[1]
+        )
+      cur.execute(insert_data_query, merged_row)
+    conn.commit()
 
   # URA database
   distinct_months_query_ura = """
