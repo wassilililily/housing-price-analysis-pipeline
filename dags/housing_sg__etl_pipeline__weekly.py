@@ -19,8 +19,8 @@ from tasks.singstat.load_singstat import (
     load_annual_basic_data,
     load_annual_cpi_categories
 )
-from tasks.URA.transform_ura import transform_ura
-from tasks.URA.load_ura import load_ura
+from tasks.ura.transform_ura import transform_ura
+from tasks.ura.load_ura import load_ura
 
 from tasks.transform import transform_merge_data
 
@@ -44,7 +44,6 @@ def housing_etl_pipeline():
     # HDB ETL
     hdb_path = extract_hdb_resale()
     transformed_hdb_path = transform_hdb(hdb_path)
-    load_hdb(transformed_hdb_path)
 
     # SingStat ETL
     file_names = search_files()
@@ -55,16 +54,27 @@ def housing_etl_pipeline():
     annual_basic_output = process_annual_basic_data(folder_path_and_files)
     annual_cpi_output = process_annual_cpi_categories(folder_path_and_files)
 
-    load_monthly_data(monthly_output)
-    load_quarterly_data(quarterly_output)
-    load_annual_basic_data(annual_basic_output)
-    load_annual_cpi_categories(annual_cpi_output)
-
     # URA ETL
     ura_path = '/opt/airflow/dags/tasks/URA/URA.xlsx'
     transformed_ura_paths = transform_ura(ura_path)
-    load_ura(transformed_ura_paths)
+    
+    load_hdb_task = load_hdb(transformed_hdb_path)
+    load_monthly_task = load_monthly_data(monthly_output)
+    load_quarterly_task = load_quarterly_data(quarterly_output)
+    load_annual_basic_task = load_annual_basic_data(annual_basic_output)
+    load_annual_cpi_task = load_annual_cpi_categories(annual_cpi_output)
+    load_ura_task = load_ura(transformed_ura_paths)
 
-    transform_merge_data()
+    # set dependency
+    merge_task = transform_merge_data()
+    
+    [
+        load_hdb_task,
+        load_monthly_task,
+        load_quarterly_task,
+        load_annual_basic_task,
+        load_annual_cpi_task,
+        load_ura_task
+    ] >> merge_task
 
 housing_etl_pipeline = housing_etl_pipeline()
