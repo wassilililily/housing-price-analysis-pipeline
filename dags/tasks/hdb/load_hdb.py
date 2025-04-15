@@ -26,6 +26,10 @@ def load_hdb(transformed_file_path):
     )
     cur = conn.cursor()
 
+    drop_table_query = "DROP TABLE IF EXISTS hdb_resale_prices;"
+    cur.execute(drop_table_query)
+    conn.commit()
+
     # Ensure the table exists with correct data types
     cur.execute("""
         CREATE TABLE IF NOT EXISTS hdb_resale_prices (

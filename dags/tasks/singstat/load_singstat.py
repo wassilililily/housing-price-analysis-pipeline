@@ -7,6 +7,11 @@ def load_monthly_data(monthly_csv):
     df = pd.read_csv(monthly_csv)
     conn = psycopg2.connect(host="postgres", port=5432, dbname="airflow", user="airflow", password="airflow")
     cur = conn.cursor()
+    
+    drop_table_query = "DROP TABLE IF EXISTS singstat_monthly_data;"
+    cur.execute(drop_table_query)
+    conn.commit()
+    
     cur.execute("""
         CREATE TABLE IF NOT EXISTS singstat_monthly_data (
             Month TEXT PRIMARY KEY,
@@ -33,6 +38,11 @@ def load_quarterly_data(quarterly_csv):
     df = pd.read_csv(quarterly_csv)
     conn = psycopg2.connect(host="postgres", port=5432, dbname="airflow", user="airflow", password="airflow")
     cur = conn.cursor()
+    
+    drop_table_query = "DROP TABLE IF EXISTS singstat_quarterly_data;"
+    cur.execute(drop_table_query)
+    conn.commit()
+    
     cur.execute("""
         CREATE TABLE IF NOT EXISTS singstat_quarterly_data (
             Year INTEGER,
@@ -57,6 +67,11 @@ def load_annual_basic_data(annual_basic_csv):
     df = pd.read_csv(annual_basic_csv)
     conn = psycopg2.connect(host="postgres", port=5432, dbname="airflow", user="airflow", password="airflow")
     cur = conn.cursor()
+    
+    drop_table_query = "DROP TABLE IF EXISTS singstat_annual_basic_data;"
+    cur.execute(drop_table_query)
+    conn.commit()
+    
     cur.execute("""
         CREATE TABLE IF NOT EXISTS singstat_annual_basic_data (
             Year INTEGER PRIMARY KEY,
@@ -83,6 +98,11 @@ def load_annual_cpi_categories(annual_cpi_csv):
     df = pd.read_csv(annual_cpi_csv)
     conn = psycopg2.connect(host="postgres", port=5432, dbname="airflow", user="airflow", password="airflow")
     cur = conn.cursor()
+    
+    drop_table_query = "DROP TABLE IF EXISTS singstat_annual_cpi_categories;"
+    cur.execute(drop_table_query)
+    conn.commit()
+    
     cur.execute("""
         CREATE TABLE IF NOT EXISTS singstat_annual_cpi_categories (
             Year INTEGER,

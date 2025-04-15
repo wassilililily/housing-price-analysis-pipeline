@@ -23,6 +23,10 @@ def load_ura(ura_csv_paths):
         df = pd.read_csv(ura_csv)
         table_name = os.path.basename(ura_csv).lower().replace(".csv", "")
 
+        drop_table_query = f"DROP TABLE IF EXISTS {table_name};"
+        cur.execute(drop_table_query)
+        conn.commit()
+        
         create_query = f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
                 id SERIAL PRIMARY KEY,
