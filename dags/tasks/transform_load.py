@@ -85,7 +85,7 @@ def transform_merge_data():
 
   def get_singstat_data(cur, year, month):
     """
-    Extract SingStat data (monthly, quarterly, and annual) for the given year and month.
+    Extract SingStat data (monthly, quarterly, and annual) for the given (year - 1) and month.
 
     Args:
         cur: Database cursor object.
@@ -98,6 +98,9 @@ def transform_merge_data():
         - Quarterly data (Unemployment_Rate)
         - Annual data (Median_Household_Income, Median_Individual_Income)
     """
+    time_lag = 1 # Time lag in years
+    year = year - time_lag
+
     # Monthly data
     singstat_month_str = f"{year} {month_abbr[int(month)]}"
     singstat_monthly_data_sql_chunk = """
