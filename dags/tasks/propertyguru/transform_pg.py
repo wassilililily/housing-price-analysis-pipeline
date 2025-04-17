@@ -4,22 +4,33 @@ from datetime import datetime
 
 @task
 def transform_propertyguru(listings):
+
     def parse_details(details_list):
         parsed = {}
         for item in details_list:
             if "bedrooms" in item:
-                parsed["bedrooms"] = int(re.search(r'\d+', item).group())
+                match = re.search(r'\d+', item)
+                if match:
+                    parsed["bedrooms"] = int(match.group())
             elif "bathrooms" in item:
-                parsed["bathrooms"] = int(re.search(r'\d+', item).group())
+                match = re.search(r'\d+', item)
+                if match:
+                    parsed["bathrooms"] = int(match.group())
             elif "sqft" in item:
-                parsed["sqft"] = float(re.sub(r'[^\d.]', '', item)) # 1,033 sqft
+                match = re.search(r'[\d,.]+', item)
+                if match:
+                    parsed["sqft"] = float(match.group().replace(",", ""))
             elif "psf" in item:
-                parsed["price_psf"] = float(re.sub(r'[^\d.]', '', item)) # S$ 1,364.96 psf
+                match = re.search(r'[\d,.]+', item)
+                if match:
+                    parsed["price_psf"] = float(match.group().replace(",", ""))
             elif "Listed on" in item:
-                date_match = re.search(r'Listed on (.+?) \(', item) # Listed on Mar 25, 2025 (10s ago)
+                date_match = re.search(r'Listed on (.+?) \(', item)
                 if date_match:
-                    date_str = date_match.group(1)
-                    parsed["listed_date"] = datetime.strptime(date_str, "%b %d, %Y")
+                    try:
+                        parsed["listed_date"] = datetime.strptime(date_match.group(1), "%b %d, %Y")
+                    except ValueError:
+                        pass  # Ignore if date format is invalid
         return parsed
     
     def parse_info(info_list):
@@ -50,6 +61,9 @@ def transform_propertyguru(listings):
     def transform(listings):
         transformed_all = []
         for item in listings:
+            # Check if any field in the listing is None, if so, skip this listing
+            if any(value is None for value in item.values()):
+                continue
             transformed = {
                 "id": item["id"],
                 "title": item["title"],

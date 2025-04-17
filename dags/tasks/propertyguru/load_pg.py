@@ -38,7 +38,8 @@ def load_propertyguru_data(listings):
         );
     """)
     conn.commit()
-    print("[INFO] Table ensured.")
+
+    inserted_ids = []
             
     for listing in listings:
         print(f"[INSERT] {listing['id']}")
@@ -48,7 +49,8 @@ def load_propertyguru_data(listings):
                 bedrooms, bathrooms, sqft, price_psf,
                 listed_date, built, tenure, property_type
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO NOTHING;
+            ON CONFLICT (id) DO NOTHING
+            RETURNING id;
         """, (
             listing['id'],
             listing['title'],
@@ -64,8 +66,17 @@ def load_propertyguru_data(listings):
             listing.get('tenure'),
             listing.get('property_type'),
         ))
+
+        try:
+            result = cur.fetchone()
+            if result:
+                inserted_ids.append(result[0])
+        except psycopg2.ProgrammingError:
+            # No result returned (e.g., due to conflict)
+            pass
             
     conn.commit()
     cur.close()
     conn.close()
-    print("[INFO] Inserted all listings.")
+
+    return inserted_ids
