@@ -22,7 +22,7 @@ from tasks.singstat.load_singstat import (
 from tasks.ura.transform_ura import transform_ura
 from tasks.ura.load_ura import load_ura
 
-from tasks.transform import transform_merge_data
+from tasks.transform_load import transform_merge_data
 
 # Default arguments
 default_args = {
@@ -55,7 +55,7 @@ def housing_etl_pipeline():
     annual_cpi_output = process_annual_cpi_categories(folder_path_and_files)
 
     # URA ETL
-    ura_path = '/opt/airflow/dags/tasks/URA/URA.xlsx'
+    ura_path = '/opt/airflow/dags/tasks/ura/URA.xlsx'
     transformed_ura_paths = transform_ura(ura_path)
     
     load_hdb_task = load_hdb(transformed_hdb_path)

@@ -4,6 +4,7 @@ from datetime import datetime
 from tasks.propertyguru.extract_pg import extract_propertyguru
 from tasks.propertyguru.transform_pg import transform_propertyguru
 from tasks.propertyguru.load_pg import load_propertyguru_data
+from tasks.propertyguru.transform_merge_pg import transform_merge_propertyguru
 
 default_args = {
     'owner': 'airflow',
@@ -23,6 +24,8 @@ default_args = {
 def propertyguru_etl():
     listings = extract_propertyguru()
     transformed_listings = transform_propertyguru(listings)
-    load_propertyguru_data(transformed_listings)
+    inserted_listing_ids = load_propertyguru_data(transformed_listings)
+    transform_merge_propertyguru(inserted_listing_ids)
+
 
 propertyguru_etl = propertyguru_etl()
