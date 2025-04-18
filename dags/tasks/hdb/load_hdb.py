@@ -36,6 +36,7 @@ def load_hdb(transformed_file_path):
             id SERIAL PRIMARY KEY,
             month DATE NOT NULL,
             town TEXT NOT NULL,
+            street_name TEXT NOT NULL,
             flat_type TEXT NOT NULL,
             storey_range TEXT NOT NULL,
             storey_range_continuous FLOAT,
@@ -53,14 +54,15 @@ def load_hdb(transformed_file_path):
     for _, row in df.iterrows():
         cur.execute("""
             INSERT INTO hdb_resale_prices (
-                month, town, flat_type, storey_range, storey_range_continuous,
+                month, town, street_name, flat_type, storey_range, storey_range_continuous,
                 floor_area_sqm, lease_commence_date, remaining_lease, 
                 remaining_lease_months, resale_price
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT DO NOTHING;
         """, (
             row['month'],
             row['town'],
+            row['street_name'],
             row['flat_type'],
             row['storey_range'],
             row.get('storey_range_continuous'),

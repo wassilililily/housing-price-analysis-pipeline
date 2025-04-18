@@ -87,7 +87,8 @@ def transform_ura(ura_path):
         df['property_type'] = df['property_type'].str.strip()
         df['floor_level_continuous'] = df['floor_level'].apply(storey_range_to_continuous)
         df['remaining_lease_months'] = df.apply(lambda row: calculate_remaining_lease(row['tenure'], row['sale_date']), axis=1)
-
+        df['postal_district'] = "D" + df["postal_district"].astype(str)
+        
         output_path = f"/opt/airflow/data/{output_file_name}.csv"
         output_paths.append(output_path)
         df.to_csv(output_path, index=False)

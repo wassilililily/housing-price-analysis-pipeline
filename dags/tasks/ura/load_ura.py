@@ -44,7 +44,7 @@ def load_ura(ura_csv_paths):
                 property_type TEXT,
                 number_of_units INTEGER,
                 tenure TEXT,
-                postal_district INTEGER NOT NULL,
+                postal_district TEXT NOT NULL,
                 market_segment TEXT,
                 floor_level TEXT,
                 floor_level_continuous FLOAT,
