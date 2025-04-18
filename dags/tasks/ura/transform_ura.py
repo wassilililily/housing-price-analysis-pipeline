@@ -1,6 +1,7 @@
 from airflow.decorators import task
 import pandas as pd
 import numpy as np
+import re
 from datetime import datetime
 
 def csv_file_name(sheet_name):
@@ -29,31 +30,41 @@ def lease_helper(tenure, sale_date):
     return lease_years * 12
 
 def calculate_remaining_lease(tenure, sale_date):
-    # if not isinstance(tenure, str) or not isinstance(sale_date(datetime, pd.Timestamp)):
-    #     return None
-    tenure = tenure.strip()
-    if tenure.lower() == "freehold":
+    if not isinstance(tenure, str) or not isinstance(sale_date, (datetime, pd.Timestamp)):
         return None
+
+    tenure = tenure.strip().lower()
+
+    # Freehold case
+    if tenure == "freehold":
+        return 999 * 12
+
+    # Format without "from" → delegate to helper
     if "from" not in tenure:
         return lease_helper(tenure, sale_date)
+
     parts = tenure.split("from")
-    lease_term = parts[0].strip()
+    lease_term = parts[0].strip()  # e.g., "60 yrs lease"
     start_year_str = parts[1].strip()
+
     if not start_year_str.isdigit():
         return None
     start_year = int(start_year_str)
-    if lease_term.startswith("999"):
-        lease_years = 999
-    elif lease_term.startswith("99"):
-        lease_years = 99
-    else:
+
+    # Extract lease duration (e.g., 60 from "60 yrs lease")
+    match = re.search(r"(\d+)", lease_term)
+    if not match:
         return None
-    # Calculate months
-    start_month = 1  # assume January
+    lease_years = int(match.group(1))
+
+    # Compute elapsed and remaining months
+    start_month = 1  # Assume January
     months_elapsed = (sale_date.year - start_year) * 12 + (sale_date.month - start_month)
     total_lease_months = lease_years * 12
     remaining_lease_months = total_lease_months - months_elapsed
-    return remaining_lease_months if remaining_lease_months >= 0 else 0
+
+    # Cap at 999 years
+    return min(max(remaining_lease_months, 0), 999 * 12)
 
 @task
 def transform_ura(ura_path):

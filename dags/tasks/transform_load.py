@@ -1,6 +1,7 @@
 from airflow.decorators import task
 import psycopg2
 from datetime import datetime
+import pandas as pd
 
 @task
 def transform_merge_data():
@@ -21,7 +22,7 @@ def transform_merge_data():
     CREATE TABLE IF NOT EXISTS housing_data (
       id SERIAL PRIMARY KEY,
       transaction_date DATE,
-      town TEXT,
+      area TEXT,
       storey_range FLOAT,
       floor_area_sqm FLOAT,
       lease_commence_year INTEGER,
@@ -40,7 +41,7 @@ def transform_merge_data():
 
   insert_data_query = """
     INSERT INTO housing_data (
-      transaction_date, town, storey_range, floor_area_sqm,
+      transaction_date, area, storey_range, floor_area_sqm,
       lease_commence_year, remaining_lease_months, type, price,
       price_per_sqm, exchange_rate, interest_rate, cpi, unemployment_rate,
       median_household_income, median_individual_income
@@ -49,6 +50,11 @@ def transform_merge_data():
   """
 
   # Helper functions
+  # To convert town to planning area
+  town_planning_df = pd.read_csv("/opt/airflow/dags/tasks/town_to_planning_area.csv")
+  planning_map = dict(zip(town_planning_df["town"].str.upper(), town_planning_df["planning_area"]))
+  print(planning_map)
+
   month_abbr = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr",
               5: "May", 6: "Jun", 7: "Jul", 8: "Aug",
               9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"}
@@ -82,6 +88,17 @@ def transform_merge_data():
     
   def calc_price_psqm(area, price):
     return round(price/area, 2)
+  
+  unmapped_towns = set()
+  def get_planning_area(town, row=None):
+    if not isinstance(town, str):
+        return "UNKNOWN"
+    cleaned = town.strip().upper()
+    pa = planning_map.get(cleaned)
+    if pa is None:
+        unmapped_towns.add(cleaned)
+        return "UNKNOWN"
+    return pa
 
   def get_singstat_data(cur, year, month):
     """
@@ -161,7 +178,7 @@ def transform_merge_data():
 
       merged_row = (
           datetime(year, month, 1),
-          town,
+          get_planning_area(town, row),
           storey_range,
           floor_area_sqm,
           lease_commence_date,
@@ -195,7 +212,7 @@ def transform_merge_data():
     row = cur.fetchall()
     distinct_year_months_ura = [(int(r[0]), int(r[1])) for r in row]
     
-    print(distinct_year_months_ura)
+    # print(distinct_year_months_ura)
     
     for year, month in distinct_year_months_ura:
       ura_sql_chunk = f"""
@@ -217,7 +234,7 @@ def transform_merge_data():
 
         merged_row = (
             datetime(year, month, 1),
-            town,
+            get_planning_area(town, row),
             storey_range,
             floor_area_sqm,
             lease_commence_date,
