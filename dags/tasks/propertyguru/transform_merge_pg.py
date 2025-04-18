@@ -1,6 +1,9 @@
 from airflow.decorators import task
 import psycopg2
 from datetime import datetime
+import requests
+import json
+import time
 
 @task 
 def transform_merge_propertyguru(listing_ids):
@@ -17,7 +20,7 @@ def transform_merge_propertyguru(listing_ids):
     CREATE TABLE IF NOT EXISTS propertyguru_data (
       id SERIAL PRIMARY KEY,
       transaction_date DATE,
-      town TEXT,
+      district TEXT,
       storey_range FLOAT,
       floor_area_sqm FLOAT,
       lease_commence_year INTEGER,
@@ -36,7 +39,7 @@ def transform_merge_propertyguru(listing_ids):
 
   insert_data_query = """
     INSERT INTO propertyguru_data (
-      transaction_date, town, storey_range, floor_area_sqm,
+      transaction_date, district, storey_range, floor_area_sqm,
       lease_commence_year, remaining_lease_months, type, price,
       price_per_sqm, exchange_rate, interest_rate, cpi, unemployment_rate,
       median_household_income, median_individual_income
@@ -147,6 +150,51 @@ def transform_merge_propertyguru(listing_ids):
 
     return singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk
   
+  def postal_code_to_district(postal_code: str) -> str:
+    # Ensure the input is valid
+    if not postal_code.isdigit() or len(postal_code) != 6:
+        raise ValueError("Postal code must be a 6-digit number string.")
+
+    sector = int(postal_code[:2])
+
+    # Mapping of sectors to districts
+    sector_to_district = {
+        1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1,
+        7: 2, 8: 2,
+        14: 3, 15: 3, 16: 3,
+        9: 4, 10: 4,
+        11: 5, 12: 5, 13: 5,
+        17: 6,
+        18: 7, 19: 7,
+        20: 8, 21: 8,
+        22: 9, 23: 9,
+        24: 10, 25: 10, 26: 10, 27: 10,
+        28: 11, 29: 11, 30: 11,
+        31: 12, 32: 12, 33: 12,
+        34: 13, 35: 13, 36: 13, 37: 13,
+        38: 14, 39: 14, 40: 14, 41: 14,
+        42: 15, 43: 15, 44: 15, 45: 15,
+        46: 16, 47: 16, 48: 16,
+        49: 17, 50: 17, 81: 17,
+        51: 18, 52: 18,
+        53: 19, 54: 19, 55: 19, 82: 19,
+        56: 20, 57: 20,
+        58: 21, 59: 21,
+        60: 22, 61: 22, 62: 22, 63: 22, 64: 22,
+        65: 23, 66: 23, 67: 23, 68: 23,
+        69: 24, 70: 24, 71: 24,
+        72: 25, 73: 25,
+        77: 26, 78: 26,
+        75: 27, 76: 27,
+        79: 28, 80: 28
+    }
+
+    district = sector_to_district.get(sector)
+    if district is None:
+        raise ValueError(f"Unknown postal sector: {sector}")
+
+    return f"D{district}"
+
   property_guru_sql = """
     SELECT 
       id,
@@ -169,9 +217,17 @@ def transform_merge_propertyguru(listing_ids):
     (id, listed_date, address, sqft, built, tenure, property_type, price, agent_description) = row
     singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk = get_singstat_data(cur, listed_date.year, listed_date.month)
 
+    search_url = f"https://www.onemap.gov.sg/api/common/elastic/search?searchVal={address}&returnGeom=N&getAddrDetails=Y&pageNum=1"
+    response = requests.get(search_url)
+    address = (json.loads(response.text))["results"][0]
+
+    # Skip this entry if we cannot obtain the postal code
+    if (address["POSTAL"] == 'NIL'):
+      continue
+
     merged_row = (
       datetime(listed_date.year, listed_date.month, 1),
-      address,
+      postal_code_to_district(address["POSTAL"]),
       None,
       sqft_to_sqm(sqft),
       built,
@@ -187,6 +243,10 @@ def transform_merge_propertyguru(listing_ids):
       singstat_annual_data_chunk[1]
     )
     cur.execute(insert_data_query, merged_row)
+
+    # Sleep to not overwhelm the API
+    time.sleep(0.1)
+
   conn.commit()
   cur.close()
   conn.close()
