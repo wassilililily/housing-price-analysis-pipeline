@@ -1,6 +1,7 @@
 from airflow.decorators import task
 import psycopg2
 from datetime import datetime
+import pandas as pd
 
 @task
 def transform_merge_data():
@@ -21,7 +22,7 @@ def transform_merge_data():
     CREATE TABLE IF NOT EXISTS housing_data (
       id SERIAL PRIMARY KEY,
       transaction_date DATE,
-      town TEXT,
+      district TEXT,
       storey_range FLOAT,
       floor_area_sqm FLOAT,
       lease_commence_year INTEGER,
@@ -40,7 +41,7 @@ def transform_merge_data():
 
   insert_data_query = """
     INSERT INTO housing_data (
-      transaction_date, town, storey_range, floor_area_sqm,
+      transaction_date, district, storey_range, floor_area_sqm,
       lease_commence_year, remaining_lease_months, type, price,
       price_per_sqm, exchange_rate, interest_rate, cpi, unemployment_rate,
       median_household_income, median_individual_income
@@ -49,6 +50,10 @@ def transform_merge_data():
   """
 
   # Helper functions
+  # To convert town to planning area
+  district_df = pd.read_csv("/opt/airflow/dags/tasks/hdb_street_to_district.csv")
+  district_map = dict(zip(district_df["street_name"].str.upper(), district_df["district"]))
+
   month_abbr = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr",
               5: "May", 6: "Jun", 7: "Jul", 8: "Aug",
               9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"}
@@ -82,6 +87,15 @@ def transform_merge_data():
     
   def calc_price_psqm(area, price):
     return round(price/area, 2)
+  
+  def get_district(street_name):
+    if not isinstance(street_name, str):
+        return None
+    cleaned = street_name.strip().upper()
+    district = district_map.get(cleaned)
+    if district is None:
+        return None
+    return district
 
   def get_singstat_data(cur, year, month):
     """
@@ -147,7 +161,7 @@ def transform_merge_data():
   distinct_year_months_hdb_resale = [(int(r[0]), int(r[1])) for r in rows]
   for year, month in distinct_year_months_hdb_resale:
     hdb_sql_chunk = """
-      SELECT town, flat_type, storey_range_continuous, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
+      SELECT town, street_name, flat_type, storey_range_continuous, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price
       FROM hdb_resale_prices
       WHERE EXTRACT(YEAR FROM month) = %s
         AND EXTRACT(MONTH FROM month) = %s
@@ -157,11 +171,11 @@ def transform_merge_data():
     singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk = get_singstat_data(cur, year, month)
 
     for row in hdb_data_chunk:
-      (town, flat_type, storey_range, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price) = row
+      (town, street_name, flat_type, storey_range, floor_area_sqm, lease_commence_date, remaining_lease_months, resale_price) = row
 
       merged_row = (
           datetime(year, month, 1),
-          town,
+          get_district(street_name),
           storey_range,
           floor_area_sqm,
           lease_commence_date,
@@ -195,11 +209,11 @@ def transform_merge_data():
     row = cur.fetchall()
     distinct_year_months_ura = [(int(r[0]), int(r[1])) for r in row]
     
-    print(distinct_year_months_ura)
+    # print(distinct_year_months_ura)
     
     for year, month in distinct_year_months_ura:
       ura_sql_chunk = f"""
-      SELECT street_name, property_type, floor_level_continuous, area_sqm, tenure, remaining_lease_months, transacted_price
+      SELECT property_type, postal_district, floor_level_continuous, area_sqm, tenure, remaining_lease_months, transacted_price
         FROM {ura_table}
         WHERE EXTRACT(YEAR FROM sale_date) = %s
           AND EXTRACT(MONTH FROM sale_date) = %s
@@ -209,7 +223,7 @@ def transform_merge_data():
       singstat_monthly_data_chunk, singstat_quarterly_data_chunk, singstat_annual_data_chunk = get_singstat_data(cur, year, month)
 
       for row in ura_data_chunk:
-        (town, flat_type, storey_range, floor_area_sqm, tenure, remaining_lease_months, resale_price) = row
+        (flat_type, postal_district, storey_range, floor_area_sqm, tenure, remaining_lease_months, resale_price) = row
         try:
             lease_commence_date = int(tenure.strip().split(" ")[-1])
         except ValueError:
@@ -217,7 +231,7 @@ def transform_merge_data():
 
         merged_row = (
             datetime(year, month, 1),
-            town,
+            postal_district,
             storey_range,
             floor_area_sqm,
             lease_commence_date,
