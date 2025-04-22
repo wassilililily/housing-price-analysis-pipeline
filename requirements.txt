@@ -4,3 +4,11 @@ requests
 selenium==4.10.0
 selenium-stealth
 openpyxl
+matplotlib
+seaborn
+xgboost
+scikit-learn
+pmdarima
+statsmodels
+joblib
+lightgbm
