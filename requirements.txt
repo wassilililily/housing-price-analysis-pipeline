@@ -12,3 +12,4 @@ pmdarima
 statsmodels
 joblib
 lightgbm
+seaborn
