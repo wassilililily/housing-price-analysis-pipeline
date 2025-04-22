@@ -5,6 +5,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 USER root
 
+RUN apt-get update && apt-get install -y libgomp1
+
 # Install Chromium & dependencies (multi-arch safe)
 RUN apt-get update && apt-get install -y \
     chromium \
