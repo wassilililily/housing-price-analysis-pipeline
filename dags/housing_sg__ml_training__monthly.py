@@ -95,8 +95,8 @@ def ml_training_pipeline():
         logging.info(f"Loaded {len(df)} rows for preprocessing.")
 
         df['transaction_date'] = pd.to_datetime(df['transaction_date'], errors='coerce')
-        df = df[df['transaction_date'].dt.year >= 2001]
-        logging.info(f"Filtered for transactions from 2001 onwards. Remaining rows: {len(df)}")
+        df = df[df['transaction_date'].dt.year >= 2002]
+        logging.info(f"Filtered for transactions from 2002 onwards. Remaining rows: {len(df)}")
 
         Q1 = df['price'].quantile(0.25)
         Q3 = df['price'].quantile(0.75)
