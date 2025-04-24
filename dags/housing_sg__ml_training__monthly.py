@@ -96,6 +96,7 @@ def ml_training_pipeline():
 
         df['transaction_date'] = pd.to_datetime(df['transaction_date'], errors='coerce')
         df = df[df['transaction_date'].dt.year >= 2002]
+        df = df[df['transaction_date'].dt.year <= 2024]
         logging.info(f"Filtered for transactions from 2002 onwards. Remaining rows: {len(df)}")
 
         Q1 = df['price'].quantile(0.25)
