@@ -117,8 +117,6 @@ def ml_training_pipeline():
     def preprocess_test_data(file_path):
         logging.info(f"Preprocessing test data from: {file_path}")
         df = pd.read_csv(file_path)
-        df = df.drop(columns=['storey_range'])
-        logging.info("'storey_range' column dropped.")
         
         df.to_csv(file_path, index=False)
         logging.info(f"Cleaned data saved to: {file_path}")
