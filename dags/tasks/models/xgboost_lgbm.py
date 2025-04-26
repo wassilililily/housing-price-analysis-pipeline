@@ -5,7 +5,10 @@ import matplotlib.pyplot as plt
 import os
 import logging
 from matplotlib.backends.backend_pdf import PdfPages
+
+from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
+from sklearn.ensemble import VotingRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -13,10 +16,10 @@ from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_squared_error, r2_score
 
 @task
-def lightgbm_model(data_file_path, test_file_path):
-    output_dir = "/opt/airflow/data/lightgbm_outputs"
+def xgboost_lgbm_model(data_file_path, test_file_path):
+    output_dir = "/opt/airflow/data/xgboost_lgbm_outputs"
     os.makedirs(output_dir, exist_ok=True)
-    pdf_path = os.path.join(output_dir, "lightgbm_report.pdf")
+    pdf_path = os.path.join(output_dir, "xgboost_lgbm_report.pdf")
 
     try:
         df = pd.read_csv(data_file_path)
@@ -83,8 +86,7 @@ def lightgbm_model(data_file_path, test_file_path):
         y_test = np.expm1(y_test_log)
 
         numeric_transformer = Pipeline([
-            ('imputer', SimpleImputer(strategy='median')),
-            ('scaler', StandardScaler())
+            ('imputer', SimpleImputer(strategy='median'))
         ])
         categorical_transformer = Pipeline([
             ('imputer', SimpleImputer(strategy='most_frequent')),
@@ -95,24 +97,23 @@ def lightgbm_model(data_file_path, test_file_path):
             ('cat', categorical_transformer, categorical_features)
         ])
 
-        model = LGBMRegressor(
-            objective='regression',
-            n_estimators=1000,
-            learning_rate=0.03,
-            max_depth=10,
-            subsample=0.9,
-            colsample_bytree=0.9,
-            min_child_samples=50,
-            random_state=42,
-            n_jobs=-1
-        )
+        model = VotingRegressor(estimators=[
+            ("xgb", XGBRegressor(
+                n_estimators=800, learning_rate=0.03, max_depth=8,
+                subsample=0.8, colsample_bytree=0.8, random_state=42, n_jobs=-1, verbosity=0
+            )),
+            ("lgbm", LGBMRegressor(
+                n_estimators=800, learning_rate=0.03, max_depth=8,
+                subsample=0.8, colsample_bytree=0.8, random_state=42, n_jobs=-1
+            ))
+        ])
 
         pipeline = Pipeline([
             ('preprocessor', preprocessor),
             ('model', model)
         ])
-        pipeline.fit(X_train, y_train)
 
+        pipeline.fit(X_train, y_train)
         y_pred_log = pipeline.predict(X_test)
         y_pred_log = np.maximum(y_pred_log, 0)
         y_pred = np.expm1(y_pred_log)
@@ -127,7 +128,7 @@ def lightgbm_model(data_file_path, test_file_path):
             plt.plot([y_test_log.min(), y_test_log.max()], [y_test_log.min(), y_test_log.max()], 'r--')
             plt.xlabel("Actual Log Price")
             plt.ylabel("Predicted Log Price")
-            plt.title("Actual vs Predicted (Log Scale)")
+            plt.title("Blended Model (XGBoost + LightGBM)")
             plt.grid(True)
             plt.tight_layout()
             pdf.savefig()
@@ -135,7 +136,7 @@ def lightgbm_model(data_file_path, test_file_path):
 
             plt.figure(figsize=(8.5, 11))
             plt.axis('off')
-            plt.text(0.1, 0.5, f"""LightGBM Final Model Metrics
+            plt.text(0.1, 0.5, f"""Blended Model Metrics (XGBoost + LightGBM)
 
 RMSE (actual):    {rmse:,.2f}
 R² (actual):      {r2:.4f}
@@ -145,9 +146,9 @@ R² (log):         {r2_log:.4f}
             pdf.savefig()
             plt.close()
 
-        logging.info(f"Final LightGBM model complete | RMSE: {rmse:.2f}, R²: {r2:.4f}, R²_log: {r2_log:.4f}")
-        logging.info(f"Final report saved to: {pdf_path}")
+        logging.info(f"xgboost_lgbm complete | RMSE: {rmse:.2f}, R²: {r2:.4f}, R²_log: {r2_log:.4f}")
+        logging.info(f"Report saved to: {pdf_path}")
 
     except Exception as e:
-        logging.error(f"Final LightGBM DAG task failed: {e}")
+        logging.error(f"xgboost_lgbm DAG task failed: {e}")
         raise

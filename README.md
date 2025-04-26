@@ -1,6 +1,6 @@
-# Singapore Housing Price Analysis – ETL Pipeline (Airflow)
+# Singapore Housing Price Analysis – ETLT Pipeline (Airflow)
 
-This project uses Apache Airflow to build a modular ETL pipeline for analyzing housing price trends in Singapore using data from HDB, URA, economic indicators, and PropertyGuru.
+This project uses Apache Airflow to build a modular ETLT pipeline for analyzing housing price trends in Singapore using data from HDB, URA, economic indicators, and PropertyGuru.
 
 ---
 
