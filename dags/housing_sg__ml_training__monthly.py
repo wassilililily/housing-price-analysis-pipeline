@@ -8,8 +8,9 @@ import numpy as np
 from tasks.models.xgboost import xgboost_model
 from tasks.models.randomforest import randomforest_model
 from tasks.models.lightgbm import lightgbm_model
-from tasks.models.linear import linear_regression
+from tasks.models.linear import linear_models
 from tasks.models.arima import arima_model
+from tasks.models.xgboost_lgbm impoart xgboost_lgbm_model
 
 default_args = {
     'owner': 'airflow',
@@ -95,9 +96,10 @@ def ml_training_pipeline():
         logging.info(f"Loaded {len(df)} rows for preprocessing.")
 
         df['transaction_date'] = pd.to_datetime(df['transaction_date'], errors='coerce')
-        df = df[df['transaction_date'].dt.year >= 2002]
-        df = df[df['transaction_date'].dt.year <= 2024]
-        logging.info(f"Filtered for transactions from 2002 onwards. Remaining rows: {len(df)}")
+        df['transaction_date'] = pd.to_datetime(df['transaction_date'], errors='coerce')
+        df = df[(df['transaction_date'] >= '2002-01-01') & (df['transaction_date'] <= '2024-12-31')]
+        logging.info(f"Filtered for transactions between 2002-01-01 and 2024-12-31. Remaining rows: {len(df)}")
+
 
         Q1 = df['price'].quantile(0.25)
         Q3 = df['price'].quantile(0.75)
@@ -131,7 +133,8 @@ def ml_training_pipeline():
     xgboost_model(cleaned_housing, cleaned_pg)
     randomforest_model(cleaned_housing, cleaned_pg)
     lightgbm_model(cleaned_housing, cleaned_pg)
-    linear_regression(cleaned_housing, cleaned_pg)
+    linear_models(cleaned_housing, cleaned_pg)
     arima_model(cleaned_housing, cleaned_pg)
+    xgboost_lgbm_model(cleaned_housing, cleaned_pg)
     
 ml_training_dag = ml_training_pipeline()
