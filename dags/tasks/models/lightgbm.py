@@ -88,7 +88,7 @@ def lightgbm_model(data_file_path, test_file_path):
         ])
         categorical_transformer = Pipeline([
             ('imputer', SimpleImputer(strategy='most_frequent')),
-            ('onehot', OneHotEncoder(handle_unknown='ignore', sparse=False))
+            ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
         ])
         preprocessor = ColumnTransformer([
             ('num', numeric_transformer, numeric_features),
