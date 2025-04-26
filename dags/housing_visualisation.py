@@ -29,9 +29,12 @@ def generate_visualisations(input_csv_path: str, output_dir: str):
     # 1. Monthly Trend of Average Housing Prices
     df_monthly = df.set_index('transaction_date').sort_index()
     monthly_avg = df_monthly['price_per_sqm'].resample('M').mean()
+    monthly_avg_hdb = df_monthly[df_monthly['type'] == 'HDB']['price_per_sqm'].resample('M').mean()
+
 
     plt.figure(figsize=(10, 6))
-    monthly_avg.plot()
+    monthly_avg.plot(label='Overall', color='steelblue', linewidth=2)
+    monthly_avg_hdb.plot(label='HDB', color='orange', linestyle='--', linewidth=2)
     plt.title("Monthly Average Price per SQM")
     plt.ylabel("SGD per SQM")
     plt.xlabel("Month")
