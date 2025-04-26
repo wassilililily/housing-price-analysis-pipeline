@@ -64,7 +64,6 @@ def xgboost_model(data_file_path, test_file_path):
         df = df.merge(region_stats, on='district', how='left')
         test = test.merge(region_stats, on='district', how='left')
 
-       
         train = df
 
         features = [
