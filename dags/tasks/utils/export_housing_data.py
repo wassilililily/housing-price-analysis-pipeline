@@ -1,4 +1,5 @@
 from airflow.decorators import task
+import psycopg2
 
 @task()
 def export_data():

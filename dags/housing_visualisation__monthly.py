@@ -223,7 +223,7 @@ def export_pdf(output_dir: str, output_pdf_path: str):
 
 # DAG Definition
 with DAG(
-    dag_id='generate_visualisations_dag',
+    dag_id='housing_visualisation__monthly',
     start_date=days_ago(1),
     schedule_interval=None,  
     catchup=False,
