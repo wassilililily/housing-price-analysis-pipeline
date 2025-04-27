@@ -13,3 +13,4 @@ statsmodels
 joblib
 lightgbm
 seaborn
+fpdf

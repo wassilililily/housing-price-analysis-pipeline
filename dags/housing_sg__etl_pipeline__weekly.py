@@ -24,6 +24,9 @@ from tasks.ura.load_ura import load_ura
 
 from tasks.transform_load import transform_merge_data
 
+from tasks.utils.export_housing_data import export_data 
+from tasks.utils.export_clean_housing_data import export_clean_housing_data
+
 # Default arguments
 default_args = {
     'owner': 'airflow',
@@ -75,6 +78,6 @@ def housing_etl_pipeline():
         load_annual_basic_task,
         load_annual_cpi_task,
         load_ura_task
-    ] >> merge_task
+    ] >> merge_task >> export_data() >> export_clean_housing_data()
 
 housing_etl_pipeline = housing_etl_pipeline()

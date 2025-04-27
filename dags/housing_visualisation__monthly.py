@@ -1,0 +1,243 @@
+from airflow import DAG
+from airflow.decorators import task
+from airflow.utils.dates import days_ago
+
+import pandas as pd
+import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+from fpdf import FPDF
+
+def classify_type(t):
+        if t == 'HDB':
+            return 'HDB'
+        elif t == 'Executive':
+            return 'Executive'
+        else:
+            return 'Private'
+        
+# Visualization Task
+@task
+def generate_visualisations(input_csv_path: str, output_dir: str):
+    df = pd.read_csv(input_csv_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
+    df['transaction_date'] = pd.to_datetime(df['transaction_date'], errors='coerce')
+    df = df.dropna(subset=['transaction_date'])
+
+    # 1. Monthly Trend of Average Housing Prices
+    df_monthly = df.set_index('transaction_date').sort_index()
+    monthly_avg = df_monthly['price_per_sqm'].resample('M').mean()
+    monthly_avg_hdb = df_monthly[df_monthly['type'] == 'HDB']['price_per_sqm'].resample('M').mean()
+
+
+    plt.figure(figsize=(10, 6))
+    monthly_avg.plot(label='Overall', color='steelblue', linewidth=2)
+    monthly_avg_hdb.plot(label='HDB', color='orange', linestyle='--', linewidth=2)
+    plt.title("Monthly Average Price per SQM")
+    plt.ylabel("SGD per SQM")
+    plt.xlabel("Month")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'monthly_avg_price_trend.png'))
+    plt.clf()
+
+    # 2. Correlation Heatmap
+    corr_cols = ['price','exchange_rate','interest_rate','cpi','unemployment_rate','median_household_income','floor_area_sqm',
+        'storey_range','remaining_lease_months']
+
+    df.set_index('transaction_date', inplace=True)
+    df_numeric = df.select_dtypes(include=[np.number])
+    monthly_df = df_numeric.resample('M').mean()
+    plt.figure(figsize=(18, 14))
+    sns.heatmap(monthly_df[corr_cols].corr(), annot=True, cmap='coolwarm')
+    plt.title("Correlation Heatmap")
+    plt.savefig(os.path.join(output_dir, 'heatmap_corr.png'))
+    plt.clf()
+
+    # 3. Top 5/Least 5
+    avg_price_by_town = df.groupby('district')['price_per_sqm'].mean().sort_values()
+    top5 = avg_price_by_town[-5:]
+    bottom5 = avg_price_by_town[:5]
+    selected = pd.concat([bottom5, top5])
+
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=selected.values, y=selected.index)
+    plt.title("Top/Least 5 Avg Price per SQM by Town")
+    plt.xlabel("SGD per SQM")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'top_least5_town_avg_price.png'))
+    plt.clf()
+
+    # 4. Lease Duration vs Price 
+    lease_filtered = df[df['remaining_lease_months'] <= 1200]
+    plt.figure(figsize=(8, 6))
+    sns.regplot(
+        data=lease_filtered,
+        x='remaining_lease_months',
+        y='price_per_sqm',
+        scatter_kws={'alpha': 0.5}, 
+        line_kws={'color': 'red'},   
+        ci=95                      
+    )
+    plt.title("Remaining Lease (<=99 years) vs Price per SQM")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'lease_vs_price_filtered.png'))
+    plt.clf()
+
+    # 5. Boxplot by Property Type
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(data=df, x='type', y='price_per_sqm')
+    plt.title("Price per SQM by Property Type")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'type_vs_price.png'))
+    plt.clf()
+
+    # 6. Storey Range : HDB vs Executive vs Private
+    df['type_group'] = df['type'].apply(classify_type)
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6), sharey=True)
+    group_order = ['HDB', 'Executive', 'Private']
+    for ax, type_group in zip(axes, group_order):
+        subset = df[df['type_group'] == type_group]
+        if not subset.empty:
+            sns.boxplot(data=subset.reset_index(drop=True), x='storey_range', y='price_per_sqm', ax=ax)
+            ax.set_title(f"{type_group}")
+            ax.set_xlabel("Storey Range")
+            ax.set_ylabel("Price per SQM" if type_group == 'HDB' else "")
+            ax.tick_params(axis='x', rotation=45)
+
+    # Adjust layout and save
+    plt.suptitle("Price per SQM by Storey Range for HDB, Executive, and Private Housing", fontsize=14)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    filename = os.path.join(output_dir, 'floor_level_vs_Price_three_types.png')
+    plt.savefig(filename)
+    plt.clf()
+
+# PDF Export Task
+@task
+def export_pdf(output_dir: str, output_pdf_path: str):
+    class PDF(FPDF):
+        def footer(self):
+            self.set_y(-10)
+            self.set_font('Arial', 'I', 8)
+            self.cell(0, 10, f'Page {self.page_no()}', align='C')
+
+    pdf = PDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Cover Page
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 20)
+    pdf.cell(0, 10, "Housing Market Trends Summary", ln=True, align='C')
+    pdf.ln(10)
+    pdf.set_font("Arial", '', 14)
+    pdf.cell(0, 10, "Generated by: Data Pipeline", ln=True, align='C')
+    pdf.cell(0, 10, "Date: {date}".format(date=pd.Timestamp.now().strftime('%Y-%m-%d')), ln=True, align='C')
+    pdf.ln(20)
+
+    pdf.set_font("Arial", '', 11)
+    pdf.multi_cell(0, 7, (
+        "This report provides a concise overview of housing market dynamics, "
+        "focusing on pricing trends, key influencing factors, and property segmentation insights."
+    ), align='C')
+
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "Key Topics Covered:", ln=True, align='C')
+    pdf.ln(5)
+    pdf.set_font("Arial", '', 11)
+    pdf.multi_cell(0, 7, (
+        "We explore housing price evolution over time, analyze relationships with macroeconomic variables, "
+        "highlight the highest and lowest performing districts, assess how lease duration impacts property valuation, "
+        "and compare pricing trends across different property types and storey ranges."
+    ), align='C')
+
+    sections = [
+        (
+            "Monthly Trend of Average Housing Prices",
+            "monthly_avg_price_trend.png",
+            "This trend chart tracks the monthly average price per square meter across all property types. "
+            "Public housing prices remained relatively stable before 2020, but surged post-2020 when private sector data "
+            "was included, highlighting a significant divergence between public and private housing values."
+        ),
+        (
+            "Housing Price and Economic Factors (Correlation Heatmap)",
+            "heatmap_corr.png",
+            "The correlation heatmap reveals that housing prices are strongly tied to remaining lease months and storey range, "
+            "while macroeconomic indicators like inflation and unemployment show weaker correlations. Physical property characteristics "
+            "appear to outweigh broad economic forces in determining value."
+        ),
+        (
+            "Top and Bottom Performing Districts (Average Price)",
+            "top_least5_town_avg_price.png",
+            "An overview of the most and least expensive districts, indicating that prime central areas consistently achieve the highest average prices. "
+            "Peripheral and suburban districts provide more affordable housing options, demonstrating a wide spread of price per square meter across the island."
+        ),
+        (
+            "Remaining Lease Duration vs Price",
+            "lease_vs_price_filtered.png",
+            "Analysis confirms a positive relationship between remaining lease tenure and property price. Longer leases are strongly preferred by buyers, "
+            "leading to higher valuations, especially for lease durations above 800 months."
+        ),
+        (
+            "Price Comparison by Property Type",
+            "type_vs_price.png",
+            "This boxplot illustrates pricing variations among property types. Private housing commands significantly higher prices, "
+            "with Executive flats positioned between standard HDB units and private homes. Private properties show a wider range, suggesting market diversity."
+        ),
+        (
+            "Storey Range Impact on Price by Property Category",
+            "floor_level_vs_Price_three_types.png",
+            "Property value trends upward with higher storeys, particularly for private housing. HDB and Executive flats show moderate gains with floor elevation, "
+            "but private sector units exhibit the most pronounced premium for high floors."
+        )
+    ]
+
+    img_width = 180  # Full width now since one image per page
+
+    for title, img_filename, summary in sections:
+        pdf.add_page()
+
+        pdf.set_font("Arial", 'B', 14)
+        pdf.multi_cell(0, 8, title, align='C')
+        pdf.ln(5)
+
+        img_path = os.path.join(output_dir, img_filename)
+        if os.path.exists(img_path):
+            page_width = pdf.w - 2 * pdf.l_margin
+            x_pos = (page_width - img_width) / 2
+            current_y = pdf.get_y()
+
+            pdf.image(img_path, x=pdf.l_margin + x_pos, w=img_width)
+            pdf.ln(5)
+
+        pdf.set_font("Arial", '', 10)
+        pdf.multi_cell(0, 6, summary, align='J')
+        pdf.ln(10)
+
+    pdf.output(output_pdf_path)
+
+
+# DAG Definition
+with DAG(
+    dag_id='generate_visualisations_dag',
+    start_date=days_ago(1),
+    schedule_interval=None,  
+    catchup=False,
+    tags=['visualization', 'housing', 'etl']
+) as dag:
+
+    visualize_task = generate_visualisations(
+        input_csv_path='/opt/airflow/data/housing_data.csv',
+        output_dir='/opt/airflow/data/graph'
+    )
+
+    pdf_task = export_pdf(
+        output_dir='/opt/airflow/data/graph',
+        output_pdf_path='/opt/airflow/data/housing_report.pdf'
+    )
+
+    visualize_task >> pdf_task
+
