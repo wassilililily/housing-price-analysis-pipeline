@@ -4,7 +4,9 @@ This project uses Apache Airflow to build a modular ETLT pipeline for analyzing 
 
 ---
 
-## Getting Started
+## Getting Started (Not Recommended)
+
+For most users, please use Docker Compose to setup the project. View "Running with Docker Compose" section below.
 
 ### 1. **Clone the repo**
 ```bash
@@ -31,7 +33,8 @@ docker compose up
 ```
 
 ### 2. **Access the Airflow UI**
-[http://localhost:8080](http://localhost:8080)  
+Access airflow at [http://localhost:8080](http://localhost:8080).
+
 Default credentials:  
 - Username: `airflow`  
 - Password: `airflow`
@@ -61,7 +64,7 @@ Default credentials:
 
 ---
 
-### `housing_sg__ml_training_monthly`
+### `housing_sg__ml_training__monthly`
 - **Purpose**: Monthly retraining of machine learning models on updated housing datasets.
 - **Tasks**:
   - Load datasets from the data mart.
@@ -70,7 +73,7 @@ Default credentials:
 
 ---
 
-### `generate_visualisations_dag`
+### `housing_visualisation__monthly`
 - **Purpose**: (Optional) Manually triggered DAG for generating updated dashboard reports.
 - **Tasks**:
   - Read from the `housing_data` table.
