@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import logging
+import joblib
 from matplotlib.backends.backend_pdf import PdfPages
 
 from xgboost import XGBRegressor
@@ -148,6 +149,12 @@ R² (log):         {r2_log:.4f}
 
         logging.info(f"xgboost_lgbm complete | RMSE: {rmse:.2f}, R²: {r2:.4f}, R²_log: {r2_log:.4f}")
         logging.info(f"Report saved to: {pdf_path}")
+
+        #Saving model
+        model_output_path = os.path.join(output_dir, "xgboost_lgbm_pipeline.pkl")
+        joblib.dump(pipeline, model_output_path)
+
+        logging.info(f"Model saved to: {model_output_path}")
 
     except Exception as e:
         logging.error(f"xgboost_lgbm DAG task failed: {e}")
