@@ -20,11 +20,11 @@ default_args = {
     tags=['propertyguru', 'etl'],
     description='ETL pipeline for PropertyGuru data every 2 hours',
 )
+
 def propertyguru_etl():
     listings = extract_propertyguru()
     transformed_listings = transform_propertyguru(listings)
     inserted_listing_ids = load_propertyguru_data(transformed_listings)
     transform_merge_propertyguru(inserted_listing_ids)
-
 
 propertyguru_etl = propertyguru_etl()
