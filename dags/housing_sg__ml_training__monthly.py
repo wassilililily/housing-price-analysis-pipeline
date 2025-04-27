@@ -10,7 +10,7 @@ from tasks.models.randomforest import randomforest_model
 from tasks.models.lightgbm import lightgbm_model
 from tasks.models.linear import linear_models
 from tasks.models.arima import arima_model
-from tasks.models.xgboost_lgbm impoart xgboost_lgbm_model
+from tasks.models.xgboost_lgbm import xgboost_lgbm_model
 
 default_args = {
     'owner': 'airflow',
