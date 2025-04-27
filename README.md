@@ -17,7 +17,7 @@ cd housing-price-analysis-pipeline
 pip install -r requirements.txt
 ```
 
-> If you're using Docker (recommended), dependencies are handled in the Dockerfile.
+> If you're using **Docker (recommended)**, dependencies are handled in the Dockerfile.
 
 ---
 
@@ -25,8 +25,9 @@ pip install -r requirements.txt
 
 ### 1. **Build and start the containers**
 ```bash
-docker-compose up airflow-init
-docker-compose up
+docker compose build
+docker compose up airflow-init
+docker compose up
 ```
 
 ### 2. **Access the Airflow UI**
@@ -37,21 +38,44 @@ Default credentials:
 
 ---
 
-## DAG: `housing_sg__etl_pipeline__weekly`
+## Available DAGs
+### `housing_sg__etlt_pipeline__weekly`
+- **Purpose**: Weekly batch ETLT pipeline for housing transactions and economic indicators.
+- **Tasks**:
+  - **Extract**:
+    - HDB Resale Price API
+    - URA Private Property Transactions (manual Excel sheets)
+    - SingStat Economic Indicators API
+  - **Transform**: Cleaning, feature engineering, and staging into the data warehouse.
+  - **Load**: Insert cleaned data into staging tables.
+  - **Final Transformation**: Merge HDB, URA, and SingStat data into the `housing_data` mart for downstream analytics.
 
-This DAG does the following:
+---
 
-1. **Extracts** data from:
-   - HDB Resale dataset
-   - URA Private Property transactions
-   - SingStat economic indicators
-   - PropertyGuru (web scraping)
+### `propertyguru__etlt__2h`
+- **Purpose**: Scrapes the latest PropertyGuru listings every 2 hours.
+- **Tasks**:
+  - **Extract**: Scrape up to 20 most recent listings from PropertyGuru using Selenium.
+  - **Transform**: Parse, clean, and enrich property data (e.g., geocoding postal codes to districts).
+  - **Load**: Insert cleaned listings into the `propertyguru_data` table.
 
-2. **Transforms** and merges the datasets
+---
 
-3. **Loads** the final dataset into a database or file
+### `housing_sg__ml_training_monthly`
+- **Purpose**: Monthly retraining of machine learning models on updated housing datasets.
+- **Tasks**:
+  - Load datasets from the data mart.
+  - Preprocess features, including handling 1-year lagged economic indicators.
+  - Train regression models (LightGBM, Random Forest, ElasticNet) and output evaluation metrics.
 
-Each task is modularized under `dags/tasks/` so that different team members can work independently.
+---
+
+### `generate_visualisations_dag`
+- **Purpose**: (Optional) Manually triggered DAG for generating updated dashboard reports.
+- **Tasks**:
+  - Read from the `housing_data` table.
+  - Generate multiple visualizations, such as price trends, correlation heatmaps, district price comparisons, and more.
+  - Compile all generated charts into a single PDF report for easy review.
 
 ---
 
