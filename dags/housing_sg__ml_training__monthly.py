@@ -19,7 +19,7 @@ default_args = {
 }
 
 @dag(
-    dag_id='housing_sg__ml_training_monthly',
+    dag_id='housing_sg__ml_training__monthly',
     default_args=default_args,
     schedule_interval='@monthly',
     catchup=False,
